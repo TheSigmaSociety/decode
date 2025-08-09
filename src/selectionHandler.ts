@@ -396,38 +396,34 @@ export class SelectionHandler {
     private parseRelatedLinesFromExplanation(explanation: string): number[] {
         const relatedLines: number[] = [];
         
-        // Look for "Lines X, Y" or "Line X" patterns (more precise matching)
-        const linePatterns = [
-            /\bLines?\s+(\d+)(?:\s*[,\s]+(\d+))*(?:\s*[-–]\s*(\d+))?/gi,  // "Lines 15, 20" or "Line 15-18"
-            /\bLine\s+(\d+)/gi,   // "Line 15"
-            /\b(\d+):\s*\w/g      // Look for line numbers followed by colon (from our format)
-        ];
-
         // First, try to find explicit "Related lines" sections
         const relatedSectionMatch = explanation.match(/related\s+lines?[:\s]*([^\n]*)/gi);
         if (relatedSectionMatch) {
             for (const match of relatedSectionMatch) {
-                const numbers = match.match(/\d+/g);
-                if (numbers) {
-                    for (const num of numbers) {
-                        const lineNum = parseInt(num) - 1; // Convert to 0-based
-                        if (lineNum >= 0 && !relatedLines.includes(lineNum)) {
-                            relatedLines.push(lineNum);
+                // Look for ranges like "10-15" or "10, 12, 15-18"
+                const content = match.toLowerCase().replace('related lines:', '').trim();
+                
+                // Split by commas to handle multiple ranges/numbers
+                const parts = content.split(/[,;]\s*/);
+                
+                for (const part of parts) {
+                    // Check if it's a range (e.g., "10-15")
+                    const rangeMatch = part.match(/(\d+)\s*[-–]\s*(\d+)/);
+                    if (rangeMatch) {
+                        const start = parseInt(rangeMatch[1]) - 1; // Convert to 0-based
+                        const end = parseInt(rangeMatch[2]) - 1;
+                        
+                        // Add all lines in the range
+                        for (let line = start; line <= end; line++) {
+                            if (line >= 0 && !relatedLines.includes(line)) {
+                                relatedLines.push(line);
+                            }
                         }
-                    }
-                }
-            }
-        }
-
-        // If no explicit related lines section, look for line references in the text
-        if (relatedLines.length === 0) {
-            const lineReferences = explanation.match(/\blines?\s+\d+(?:[,\s]+\d+)*/gi);
-            if (lineReferences) {
-                for (const ref of lineReferences) {
-                    const numbers = ref.match(/\d+/g);
-                    if (numbers) {
-                        for (const num of numbers) {
-                            const lineNum = parseInt(num) - 1; // Convert to 0-based
+                    } else {
+                        // Single line number
+                        const singleMatch = part.match(/\d+/);
+                        if (singleMatch) {
+                            const lineNum = parseInt(singleMatch[0]) - 1;
                             if (lineNum >= 0 && !relatedLines.includes(lineNum)) {
                                 relatedLines.push(lineNum);
                             }
@@ -437,8 +433,27 @@ export class SelectionHandler {
             }
         }
 
-        // Remove any lines that are likely part of the user's selection
-        // (we'll filter these out in the decoration manager anyway)
+        // If no explicit related lines section, look for line references in the text
+        if (relatedLines.length === 0) {
+            // Look for patterns like "Lines 10-15" or "Line 20"
+            const lineReferences = explanation.match(/\blines?\s+(\d+)(?:\s*[-–]\s*(\d+))?/gi);
+            if (lineReferences) {
+                for (const ref of lineReferences) {
+                    const rangeMatch = ref.match(/\blines?\s+(\d+)(?:\s*[-–]\s*(\d+))?/i);
+                    if (rangeMatch) {
+                        const start = parseInt(rangeMatch[1]) - 1;
+                        const end = rangeMatch[2] ? parseInt(rangeMatch[2]) - 1 : start;
+                        
+                        // Add all lines in the range
+                        for (let line = start; line <= end; line++) {
+                            if (line >= 0 && !relatedLines.includes(line)) {
+                                relatedLines.push(line);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         console.log(`Parsed related lines from explanation:`, relatedLines.map(l => l + 1)); // Log as 1-based for readability
         return relatedLines.sort((a, b) => a - b);

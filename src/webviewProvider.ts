@@ -374,6 +374,28 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                     .primary-button:hover, .secondary-button:hover {
                         background: var(--vscode-button-hoverBackground, #1177bb);
                     }
+                    /* Compact explanation styling */
+                    .explanation-content h2, .explanation-content h3, .explanation-content h4 {
+                        margin: 8px 0 4px 0;
+                        line-height: 1.2;
+                    }
+                    .explanation-content p {
+                        margin: 4px 0;
+                        line-height: 1.4;
+                    }
+                    .explanation-content ul {
+                        margin: 4px 0;
+                        padding-left: 20px;
+                    }
+                    .explanation-content li {
+                        margin: 2px 0;
+                    }
+                    .explanation-content pre {
+                        margin: 6px 0;
+                        padding: 8px;
+                        background: rgba(0,0,0,0.2);
+                        border-radius: 4px;
+                    }
                 </style>
                 <title>AI Code Explanation</title>
             </head>
