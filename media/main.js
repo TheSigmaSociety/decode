@@ -65,6 +65,8 @@
             .replace(/^\d+\.\s+(.*)$/gim, '<li>$1</li>')
             // Bullet points
             .replace(/^[-*]\s+(.*)$/gim, '<li>$1</li>')
+            // Reduce multiple line breaks to single breaks
+            .replace(/\n\s*\n\s*\n/g, '\n\n')
             // Line breaks
             .replace(/\n\n/g, '</p><p>')
             .replace(/\n/g, '<br>');
@@ -77,9 +79,17 @@
         // Wrap in paragraph tags
         html = '<p>' + html + '</p>';
         
-        // Clean up empty paragraphs
+        // Clean up excessive spacing and empty paragraphs
         html = html.replace(/<p><\/p>/g, '');
         html = html.replace(/<p><h/g, '<h').replace(/<\/h([1-6])><\/p>/g, '</h$1>');
+        html = html.replace(/<p>\s*<\/p>/g, '');
+        html = html.replace(/(<\/h[1-6]>)\s*<p>/g, '$1<p>');
+        html = html.replace(/(<\/ul>)\s*<p>/g, '$1<p>');
+        html = html.replace(/(<\/pre>)\s*<p>/g, '$1<p>');
+        
+        // Remove extra line breaks between sections
+        html = html.replace(/<br>\s*<h/g, '<h');
+        html = html.replace(/<\/h([1-6])>\s*<br>/g, '</h$1>');
         
         return html;
     }
@@ -160,6 +170,12 @@
                 break;
             case 'showLoading':
                 showLoading();
+                break;
+            case 'showInlineLoading':
+                showInlineLoading();
+                break;
+            case 'hideInlineLoading':
+                hideInlineLoading();
                 break;
             case 'showWelcome':
                 showWelcome();
@@ -287,6 +303,26 @@
         }
         
         errorSection?.classList.remove('hidden');
+    }
+    
+    function showInlineLoading() {
+        console.log('Showing inline loading indicator');
+        const inlineLoading = document.getElementById('inlineLoading');
+        if (inlineLoading) {
+            inlineLoading.classList.remove('hidden');
+        } else {
+            console.error('inlineLoading element not found');
+        }
+    }
+    
+    function hideInlineLoading() {
+        console.log('Hiding inline loading indicator');
+        const inlineLoading = document.getElementById('inlineLoading');
+        if (inlineLoading) {
+            inlineLoading.classList.add('hidden');
+        } else {
+            console.error('inlineLoading element not found');
+        }
     }
     
     function formatExplanation(explanation) {

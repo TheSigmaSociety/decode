@@ -87,21 +87,20 @@ ${codeSnippet}
 
 **Instructions:**
 1. Focus ONLY on the selected code (marked with >>>)
-2. Be concise - 2-3 short paragraphs maximum
+2. Be concise - 3-5 short paragraphs maximum
 3. If you identify related lines that help understand the selected code, mention their line numbers
 4. Use the surrounding code as context but don't explain it unless directly relevant
+5. Use compact formatting - no extra blank lines between sections
 
-**Response format:**
+**Response format (no extra spacing):**
 ## Purpose
 Brief explanation of what the selected code does.
-
 ## How it works
 Concise explanation of the mechanism.
-
 ## Related lines
-If applicable: "Lines X, Y: brief explanation of relevance"
+If applicable: "Lines X-Y: brief explanation" or "Lines X, Y: brief explanation"
 
-Keep it focused and under 300 words.`;
+Keep it focused and under 300 words. Use compact formatting.`;
 
         return prompt;
     }

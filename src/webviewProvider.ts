@@ -156,6 +156,34 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
         this._saveState();
     }
 
+    public showInlineLoading(): void {
+        console.log('WebviewProvider.showInlineLoading called');
+        this._isLoading = true;
+        
+        if (this._view) {
+            console.log('Sending showInlineLoading message to webview');
+            this._view.webview.postMessage({
+                type: 'showInlineLoading'
+            });
+        } else {
+            console.warn('Webview is not available to show inline loading');
+        }
+    }
+
+    public hideInlineLoading(): void {
+        console.log('WebviewProvider.hideInlineLoading called');
+        this._isLoading = false;
+        
+        if (this._view) {
+            console.log('Sending hideInlineLoading message to webview');
+            this._view.webview.postMessage({
+                type: 'hideInlineLoading'
+            });
+        } else {
+            console.warn('Webview is not available to hide inline loading');
+        }
+    }
+
     public showWelcome(): void {
         this._currentState = WebviewState.Welcome;
         
@@ -374,6 +402,28 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                     .primary-button:hover, .secondary-button:hover {
                         background: var(--vscode-button-hoverBackground, #1177bb);
                     }
+                    /* Compact explanation styling */
+                    .explanation-content h2, .explanation-content h3, .explanation-content h4 {
+                        margin: 8px 0 4px 0;
+                        line-height: 1.2;
+                    }
+                    .explanation-content p {
+                        margin: 4px 0;
+                        line-height: 1.4;
+                    }
+                    .explanation-content ul {
+                        margin: 4px 0;
+                        padding-left: 20px;
+                    }
+                    .explanation-content li {
+                        margin: 2px 0;
+                    }
+                    .explanation-content pre {
+                        margin: 6px 0;
+                        padding: 8px;
+                        background: rgba(0,0,0,0.2);
+                        border-radius: 4px;
+                    }
                 </style>
                 <title>AI Code Explanation</title>
             </head>
@@ -417,6 +467,10 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                     <div id="explanation" class="section hidden">
                         <div class="explanation-header">
                             <h3>Code Explanation</h3>
+                            <div id="inlineLoading" class="inline-loading hidden">
+                                <div class="inline-spinner"></div>
+                                <span>Generating explanation...</span>
+                            </div>
                             <div class="actions">
                                 <button id="historyBtn" class="icon-button" title="Show history">
                                     <span class="codicon codicon-history"></span>

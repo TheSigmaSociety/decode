@@ -130,6 +130,28 @@ p {
     100% { transform: rotate(360deg); }
 }
 
+/* Inline loading for subsequent requests */
+.inline-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
+.inline-loading.hidden {
+    display: none;
+}
+
+.inline-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--vscode-progressBar-background);
+    border-top: 2px solid var(--vscode-progressBar-foreground);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
 /* Explanation */
 .explanation-header,
 .history-header {
