@@ -241,6 +241,7 @@ export class SelectionHandler {
             
             console.log(`Sending full file context to Gemini API (${enhancedContext.length} characters)`);
             console.log(`Selected text: "${selectedText}" (lines ${startLine + 1}-${endLine + 1})`);
+            console.log('Context preview (first 500 chars):', enhancedContext.substring(0, 500) + '...');
             
             // Generate explanation using Gemini with retry logic
             const explanation = await this.errorHandler.retryWithBackoff(async () => {
@@ -353,54 +354,40 @@ export class SelectionHandler {
         const lines = fullFileContent.split('\n');
         const maxContextLength = 8000; // Reasonable limit for API calls
         
-        // If the file is small enough, send the whole thing with selection markers
+        // If the file is small enough, send the whole thing with line numbers
         if (fullFileContent.length <= maxContextLength) {
-            // Add markers to indicate the selected portion
+            // Add line numbers and selection markers
             const markedLines = lines.map((line, index) => {
+                const lineNumber = index + 1; // 1-based line numbers
                 if (index >= startLine && index <= endLine) {
-                    return `>>> ${line} <<<  // [SELECTED BY USER]`;
+                    return `${lineNumber}: >>> ${line} <<<  // [SELECTED BY USER]`;
                 }
-                return line;
+                return `${lineNumber}: ${line}`;
             });
             
             return markedLines.join('\n');
         }
         
-        // For larger files, include context around the selection
+        // For larger files, include context around the selection WITH ACTUAL LINE NUMBERS
         const contextRadius = 20; // Lines of context before and after selection
         const contextStart = Math.max(0, startLine - contextRadius);
         const contextEnd = Math.min(lines.length - 1, endLine + contextRadius);
         
         let contextLines: string[] = [];
         
-        // Add file header info if available
-        if (context.imports && context.imports.length > 0) {
-            contextLines.push('// File imports:');
-            context.imports.forEach((imp: string) => {
-                contextLines.push(`// ${imp}`);
-            });
-            contextLines.push('');
-        }
+        // Add context info
+        contextLines.push(`// Context: Lines ${contextStart + 1}-${contextEnd + 1} of ${lines.length} total lines`);
+        contextLines.push(`// Selected: Lines ${startLine + 1}-${endLine + 1}`);
+        contextLines.push('');
         
-        // Add context before selection
-        if (contextStart > 0) {
-            contextLines.push('// ... (earlier code omitted) ...');
-            contextLines.push('');
-        }
-        
-        // Add the contextual code with selection markers
+        // Add the contextual code with ACTUAL line numbers and selection markers
         for (let i = contextStart; i <= contextEnd; i++) {
+            const lineNumber = i + 1; // 1-based line numbers
             if (i >= startLine && i <= endLine) {
-                contextLines.push(`>>> ${lines[i]} <<<  // [SELECTED BY USER]`);
+                contextLines.push(`${lineNumber}: >>> ${lines[i]} <<<  // [SELECTED BY USER]`);
             } else {
-                contextLines.push(lines[i]);
+                contextLines.push(`${lineNumber}: ${lines[i]}`);
             }
-        }
-        
-        // Add indicator if there's more code after
-        if (contextEnd < lines.length - 1) {
-            contextLines.push('');
-            contextLines.push('// ... (later code omitted) ...');
         }
         
         return contextLines.join('\n');
@@ -409,48 +396,50 @@ export class SelectionHandler {
     private parseRelatedLinesFromExplanation(explanation: string): number[] {
         const relatedLines: number[] = [];
         
-        // Look for patterns like "Line 15", "line 23", "Lines 10-15", etc.
+        // Look for "Lines X, Y" or "Line X" patterns (more precise matching)
         const linePatterns = [
-            /\bline\s+(\d+)/gi,  // "line 15"
-            /\blines?\s+(\d+)(?:\s*[-–]\s*(\d+))?/gi,  // "line 15" or "lines 15-18"
-            /\bLine\s+(\d+)/g,   // "Line 15" (capital L)
-            /\bLines\s+(\d+)(?:\s*[-–]\s*(\d+))?/g   // "Lines 15-18"
+            /\bLines?\s+(\d+)(?:\s*[,\s]+(\d+))*(?:\s*[-–]\s*(\d+))?/gi,  // "Lines 15, 20" or "Line 15-18"
+            /\bLine\s+(\d+)/gi,   // "Line 15"
+            /\b(\d+):\s*\w/g      // Look for line numbers followed by colon (from our format)
         ];
 
-        for (const pattern of linePatterns) {
-            let match;
-            while ((match = pattern.exec(explanation)) !== null) {
-                const startLine = parseInt(match[1]) - 1; // Convert to 0-based indexing
-                const endLine = match[2] ? parseInt(match[2]) - 1 : startLine;
-                
-                // Add all lines in the range
-                for (let line = startLine; line <= endLine; line++) {
-                    if (line >= 0 && !relatedLines.includes(line)) {
-                        relatedLines.push(line);
+        // First, try to find explicit "Related lines" sections
+        const relatedSectionMatch = explanation.match(/related\s+lines?[:\s]*([^\n]*)/gi);
+        if (relatedSectionMatch) {
+            for (const match of relatedSectionMatch) {
+                const numbers = match.match(/\d+/g);
+                if (numbers) {
+                    for (const num of numbers) {
+                        const lineNum = parseInt(num) - 1; // Convert to 0-based
+                        if (lineNum >= 0 && !relatedLines.includes(lineNum)) {
+                            relatedLines.push(lineNum);
+                        }
                     }
                 }
             }
         }
 
-        // Also look for code snippets in backticks that might reference line numbers
-        const codeBlockPattern = /```[\s\S]*?```/g;
-        explanation.replace(codeBlockPattern, ''); // Remove code blocks to avoid false positives
-        
-        // Look for "related lines:" sections
-        const relatedSectionPattern = /related\s+(?:lines?|code|elements?)[\s:]*([^\n]*)/gi;
-        let match;
-        while ((match = relatedSectionPattern.exec(explanation)) !== null) {
-            const section = match[1];
-            const numberPattern = /\d+/g;
-            let numberMatch;
-            while ((numberMatch = numberPattern.exec(section)) !== null) {
-                const lineNum = parseInt(numberMatch[0]) - 1; // Convert to 0-based
-                if (lineNum >= 0 && !relatedLines.includes(lineNum)) {
-                    relatedLines.push(lineNum);
+        // If no explicit related lines section, look for line references in the text
+        if (relatedLines.length === 0) {
+            const lineReferences = explanation.match(/\blines?\s+\d+(?:[,\s]+\d+)*/gi);
+            if (lineReferences) {
+                for (const ref of lineReferences) {
+                    const numbers = ref.match(/\d+/g);
+                    if (numbers) {
+                        for (const num of numbers) {
+                            const lineNum = parseInt(num) - 1; // Convert to 0-based
+                            if (lineNum >= 0 && !relatedLines.includes(lineNum)) {
+                                relatedLines.push(lineNum);
+                            }
+                        }
+                    }
                 }
             }
         }
 
+        // Remove any lines that are likely part of the user's selection
+        // (we'll filter these out in the decoration manager anyway)
+        
         console.log(`Parsed related lines from explanation:`, relatedLines.map(l => l + 1)); // Log as 1-based for readability
         return relatedLines.sort((a, b) => a - b);
     }
