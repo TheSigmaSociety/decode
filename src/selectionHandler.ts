@@ -196,6 +196,7 @@ export class SelectionHandler {
             await this.generateExplanationForSelection(editor, selection);
 
         } catch (error: any) {
+            console.error(`Failed to analyze line ${lineNumber + 1}:`, error);
             this.errorHandler.handleAnalysisError(error);
             this.webviewProvider.showError(`Failed to analyze line ${lineNumber + 1}: ${error.message}`);
         }
@@ -203,10 +204,17 @@ export class SelectionHandler {
 
     private async generateExplanationForSelection(editor: vscode.TextEditor, selection: vscode.Selection): Promise<void> {
         const startTime = Date.now();
+        let timeoutId: NodeJS.Timeout | null = null;
         
         try {
             // Log the start of analysis
             console.log(`Starting code analysis for selection at line ${selection.start.line}`);
+            
+            // Set a timeout to prevent indefinite loading
+            timeoutId = setTimeout(() => {
+                console.warn('Explanation generation taking too long, showing timeout error');
+                this.webviewProvider.showError('Request timed out. The AI service may be temporarily unavailable.');
+            }, 30000); // 30 second timeout
             
             // Analyze the code selection
             const analysisResult = await this.codeAnalysis.analyzeCodeSelection(editor.document, selection);
@@ -233,6 +241,12 @@ export class SelectionHandler {
                 return result;
             });
 
+            // Clear timeout if we got here successfully
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+
             // Log successful completion
             const duration = Date.now() - startTime;
             console.log(`Explanation generated successfully in ${duration}ms (${explanation.length} characters)`);
@@ -245,20 +259,35 @@ export class SelectionHandler {
             );
 
         } catch (error: any) {
+            // Clear timeout if set
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            
             const duration = Date.now() - startTime;
             console.error(`Explanation generation failed after ${duration}ms:`, error);
             
+            // Always show error in webview to clear loading state
+            let errorMessage = 'Failed to generate explanation';
+            
             // Determine error type and handle appropriately
             if (error.name === 'AnalysisError') {
+                errorMessage = `Code analysis error: ${error.message}`;
                 this.errorHandler.handleAnalysisError(error);
             } else if (error.name === 'ApiError') {
+                errorMessage = `API error: ${error.message}`;
                 this.errorHandler.handleApiError(error);
             } else if (error.name === 'ConfigurationError') {
+                errorMessage = `Configuration error: ${error.message}`;
                 this.errorHandler.handleConfigurationError(error);
             } else {
                 // Generic error handling
+                errorMessage = `Unexpected error: ${error.message || 'Unknown error occurred'}`;
                 this.errorHandler.handleApiError(error);
             }
+            
+            // Ensure webview shows error instead of staying in loading state
+            this.webviewProvider.showError(errorMessage);
         }
     }
 

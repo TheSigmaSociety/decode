@@ -38,6 +38,7 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
         context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
+        console.log('WebviewProvider.resolveWebviewView called');
         this._view = webviewView;
 
         webviewView.webview.options = {
@@ -47,17 +48,26 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
             ]
         };
 
+        console.log('Setting webview HTML content');
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
         // Handle messages from the webview
         webviewView.webview.onDidReceiveMessage(
             message => {
+                console.log('Received message from webview:', message.type, message);
                 switch (message.type) {
                     case 'ready':
+                        console.log('Webview is ready');
                         this._onWebviewReady();
                         break;
                     case 'requestExplanation':
+                        console.log('Explanation requested from webview');
                         this._onExplanationRequested();
+                        break;
+                    case 'test':
+                        console.log('Test message received from webview');
+                        // Send a test explanation
+                        this.updateContent('# Test Successful!\n\nThe webview communication is working correctly. This is a test explanation to verify that:\n\n- ✅ Messages are being sent from webview to extension\n- ✅ Extension can update webview content\n- ✅ Markdown formatting is working\n- ✅ UI state management is functional\n\n```typescript\nconsole.log("Webview test passed!");\n```', 'test code', 'typescript');
                         break;
                     case 'copyExplanation':
                         this._onCopyExplanation(message.text);
@@ -74,14 +84,19 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                     case 'loadHistoryItem':
                         this._onLoadHistoryItem(message.index);
                         break;
+                    default:
+                        console.warn('Unknown message type from webview:', message.type);
                 }
             },
             undefined,
             this._context.subscriptions
         );
+        
+        console.log('Webview provider setup complete');
     }
 
     public updateContent(explanation: string, codeSnippet?: string, language?: string): void {
+        console.log('WebviewProvider.updateContent called with explanation length:', explanation.length);
         this._currentExplanation = explanation;
         this._isLoading = false;
         this._currentState = WebviewState.Explanation;
@@ -92,39 +107,50 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
         }
         
         if (this._view) {
+            console.log('Sending updateExplanation message to webview');
             this._view.webview.postMessage({
                 type: 'updateExplanation',
                 explanation: explanation,
                 hasHistory: this._explanationHistory.length > 0
             });
+        } else {
+            console.warn('Webview is not available to update content');
         }
         
         this._saveState();
     }
 
     public showError(message: string): void {
+        console.log('WebviewProvider.showError called with message:', message);
         this._isLoading = false;
         this._currentState = WebviewState.Error;
         this._lastError = message;
         
         if (this._view) {
+            console.log('Sending showError message to webview');
             this._view.webview.postMessage({
                 type: 'showError',
                 message: message
             });
+        } else {
+            console.warn('Webview is not available to show error');
         }
         
         this._saveState();
     }
 
     public showLoading(): void {
+        console.log('WebviewProvider.showLoading called');
         this._isLoading = true;
         this._currentState = WebviewState.Loading;
         
         if (this._view) {
+            console.log('Sending showLoading message to webview');
             this._view.webview.postMessage({
                 type: 'showLoading'
             });
+        } else {
+            console.warn('Webview is not available to show loading');
         }
         
         this._saveState();
@@ -178,9 +204,11 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
     }
 
     private _onWebviewReady(): void {
+        console.log('_onWebviewReady called, current state:', this._currentState);
         // Webview is ready, restore previous state
         switch (this._currentState) {
             case WebviewState.Explanation:
+                console.log('Restoring explanation state, has explanation:', !!this._currentExplanation);
                 if (this._currentExplanation) {
                     this._view?.webview.postMessage({
                         type: 'updateExplanation',
@@ -188,23 +216,29 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                         hasHistory: this._explanationHistory.length > 0
                     });
                 } else {
+                    console.log('No current explanation, showing welcome');
                     this.showWelcome();
                 }
                 break;
             case WebviewState.Loading:
+                console.log('Restoring loading state');
                 this.showLoading();
                 break;
             case WebviewState.Error:
+                console.log('Restoring error state, error:', this._lastError);
                 if (this._lastError) {
                     this.showError(this._lastError);
                 } else {
+                    console.log('No last error, showing welcome');
                     this.showWelcome();
                 }
                 break;
             case WebviewState.ConfigurationNeeded:
+                console.log('Showing configuration needed');
                 this.showConfigurationNeeded();
                 break;
             default:
+                console.log('Default case, showing welcome');
                 this.showWelcome();
         }
     }
@@ -309,6 +343,38 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                 <link href="${styleVSCodeUri}" rel="stylesheet">
                 <link href="${styleMainUri}" rel="stylesheet">
                 <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+                <style>
+                    /* Debug styles to ensure visibility */
+                    body { 
+                        background-color: var(--vscode-editor-background, #1e1e1e) !important; 
+                        color: var(--vscode-editor-foreground, #d4d4d4) !important;
+                        margin: 0;
+                        padding: 10px;
+                        font-family: var(--vscode-font-family);
+                    }
+                    .section { 
+                        display: block !important; 
+                        min-height: 50px;
+                        border: 1px solid rgba(255,255,255,0.1);
+                        padding: 10px;
+                        margin: 5px 0;
+                        background: rgba(255,255,255,0.05);
+                    }
+                    .section.hidden { 
+                        display: none !important; 
+                    }
+                    .primary-button, .secondary-button {
+                        background: var(--vscode-button-background, #0e639c);
+                        color: var(--vscode-button-foreground, white);
+                        border: none;
+                        padding: 8px 16px;
+                        cursor: pointer;
+                        margin: 5px;
+                    }
+                    .primary-button:hover, .secondary-button:hover {
+                        background: var(--vscode-button-hoverBackground, #1177bb);
+                    }
+                </style>
                 <title>AI Code Explanation</title>
             </head>
             <body>
@@ -320,6 +386,9 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                             <button id="explainBtn" class="primary-button">
                                 <span class="codicon codicon-lightbulb"></span>
                                 Explain Selected Code
+                            </button>
+                            <button id="testBtn" class="secondary-button" style="margin-top: 10px;">
+                                🧪 Test Webview
                             </button>
                         </div>
                     </div>
@@ -402,57 +471,6 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
 
                 <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
                 <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-                <script nonce="${nonce}">
-                    // Simple markdown parser for code explanations
-                    function parseMarkdown(text) {
-                        if (!text) return '';
-                        
-                        // Convert markdown to HTML
-                        let html = text
-                            // Headers
-                            .replace(/^### (.*$)/gim, '<h4>$1</h4>')
-                            .replace(/^## (.*$)/gim, '<h3>$1</h3>')
-                            .replace(/^# (.*$)/gim, '<h2>$1</h2>')
-                            // Bold
-                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                            // Code blocks with syntax highlighting
-                            .replace(/\`\`\`(\w+)?\n([\s\S]*?)\`\`\`/g, function(match, lang, code) {
-                                const language = lang || 'javascript';
-                                const escapedCode = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                                return '<pre class="code-block"><code class="language-' + language + '">' + escapedCode + '</code></pre>';
-                            })
-                            // Inline code
-                            .replace(/\`([^\`]+)\`/g, '<code class="inline-code">$1</code>')
-                            // Numbered lists
-                            .replace(/^\d+\.\s+(.*)$/gim, '<li>$1</li>')
-                            // Bullet points
-                            .replace(/^[-*]\s+(.*)$/gim, '<li>$1</li>')
-                            // Line breaks
-                            .replace(/\n\n/g, '</p><p>')
-                            .replace(/\n/g, '<br>');
-                        
-                        // Wrap consecutive list items in ul tags
-                        html = html.replace(/(<li>.*?<\/li>)(\s*<br>\s*<li>.*?<\/li>)*/g, function(match) {
-                            return '<ul>' + match.replace(/<br>\s*/g, '') + '</ul>';
-                        });
-                        
-                        // Wrap in paragraph tags
-                        html = '<p>' + html + '</p>';
-                        
-                        // Clean up empty paragraphs
-                        html = html.replace(/<p><\/p>/g, '');
-                        html = html.replace(/<p><h/g, '<h').replace(/<\/h([1-6])><\/p>/g, '</h$1>');
-                        
-                        return html;
-                    }
-                    
-                    // Function to highlight code after inserting
-                    function highlightCode() {
-                        if (typeof Prism !== 'undefined') {
-                            Prism.highlightAll();
-                        }
-                    }
-                </script>
                 <script nonce="${nonce}" src="${scriptUri}"></script>
             </body>
             </html>`;

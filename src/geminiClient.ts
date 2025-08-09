@@ -22,6 +22,7 @@ export class GeminiApiClient implements GeminiClient {
         }
 
         try {
+            console.log('Sending request to Gemini API...');
             const prompt = this.buildExplanationPrompt(codeSnippet, context);
             
             const response = await this.client.models.generateContent({
@@ -35,12 +36,15 @@ export class GeminiApiClient implements GeminiClient {
                 }
             });
 
-            if (!response.text) {
+            console.log('Received response from Gemini API:', response.text ? 'Success' : 'Empty');
+
+            if (!response.text || response.text.trim().length === 0) {
                 throw new ApiError('Empty response from Gemini API', undefined, true);
             }
 
             return response.text;
         } catch (error: any) {
+            console.error('Gemini API Error:', error);
             this.handleApiError(error);
             throw error; // Re-throw after handling
         }
@@ -61,6 +65,7 @@ export class GeminiApiClient implements GeminiClient {
 
             return response.text !== undefined;
         } catch (error: any) {
+            console.error('API key validation error:', error);
             // API key is invalid if we get authentication errors
             if (error.status === 401 || error.status === 403) {
                 return false;
