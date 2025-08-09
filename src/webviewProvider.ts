@@ -430,7 +430,7 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
             <body>
                 <div id="app">
                     <div id="welcome" class="section">
-                        <h2>🤖 AI Code Explanation</h2>
+                        <h2>Decode: AI Code Explanation</h2>
                         <p>Select a line of code in the editor to get an AI-powered explanation.</p>
                         <div class="actions">
                             <button id="explainBtn" class="primary-button">

@@ -174,14 +174,14 @@ export class CodeDecorationManager implements DecorationManager {
 
     private createSelectedLineDecoration(): vscode.TextEditorDecorationType {
         return vscode.window.createTextEditorDecorationType({
-            backgroundColor: new vscode.ThemeColor('editor.selectionHighlightBackground'),
+            backgroundColor: 'rgba(255, 107, 53, 0.15)', // Orange background with transparency
             borderWidth: '2px',
             borderStyle: 'solid',
-            borderColor: new vscode.ThemeColor('editor.selectionHighlightBorder'),
+            borderColor: '#ff6b35', // Bright orange border
             borderRadius: '3px',
             isWholeLine: true,
-            overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.selectionHighlightForeground'),
-            overviewRulerLane: vscode.OverviewRulerLane.Right,
+            overviewRulerColor: '#ff6b35', // Bright orange for selected lines
+            overviewRulerLane: vscode.OverviewRulerLane.Full,
             after: {
                 contentText: ' 🎯 Selected',
                 color: new vscode.ThemeColor('editorCodeLens.foreground'),
@@ -193,14 +193,14 @@ export class CodeDecorationManager implements DecorationManager {
 
     private createRelatedLinesDecoration(): vscode.TextEditorDecorationType {
         return vscode.window.createTextEditorDecorationType({
-            backgroundColor: new vscode.ThemeColor('editor.findMatchHighlightBackground'),
+            backgroundColor: 'rgba(76, 175, 80, 0.15)', // Green background with transparency
             borderWidth: '1px',
             borderStyle: 'solid',
-            borderColor: new vscode.ThemeColor('editor.findMatchHighlightBorder'),
+            borderColor: '#4caf50', // Bright green border
             borderRadius: '2px',
             isWholeLine: true,
-            overviewRulerColor: new vscode.ThemeColor('editorOverviewRuler.findMatchForeground'),
-            overviewRulerLane: vscode.OverviewRulerLane.Center,
+            overviewRulerColor: '#4caf50', // Bright green for related lines
+            overviewRulerLane: vscode.OverviewRulerLane.Full,
             after: {
                 contentText: ' 🔗 Related',
                 color: new vscode.ThemeColor('editorCodeLens.foreground'),

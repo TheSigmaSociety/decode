@@ -420,9 +420,28 @@ export class SelectionHandler {
     private parseRelatedLinesFromExplanation(explanation: string): number[] {
         const relatedLines: number[] = [];
         
-        // First, try to find explicit "Related lines" sections
+        // Look for all line references in the format "Lines X-Y:" or "Line X:"
+        const lineReferences = explanation.match(/^lines?\s+(\d+)(?:\s*[-–]\s*(\d+))?:/gmi);
+        if (lineReferences) {
+            for (const ref of lineReferences) {
+                const rangeMatch = ref.match(/^lines?\s+(\d+)(?:\s*[-–]\s*(\d+))?:/i);
+                if (rangeMatch) {
+                    const start = parseInt(rangeMatch[1]) - 1; // Convert to 0-based
+                    const end = rangeMatch[2] ? parseInt(rangeMatch[2]) - 1 : start;
+                    
+                    // Add all lines in the range
+                    for (let line = start; line <= end; line++) {
+                        if (line >= 0 && !relatedLines.includes(line)) {
+                            relatedLines.push(line);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Also try to find explicit "Related lines" sections (legacy format)
         const relatedSectionMatch = explanation.match(/related\s+lines?[:\s]*([^\n]*)/gi);
-        if (relatedSectionMatch) {
+        if (relatedSectionMatch && relatedLines.length === 0) {
             for (const match of relatedSectionMatch) {
                 // Look for ranges like "10-15" or "10, 12, 15-18"
                 const content = match.toLowerCase().replace('related lines:', '').trim();
@@ -457,28 +476,6 @@ export class SelectionHandler {
             }
         }
 
-        // If no explicit related lines section, look for line references in the text
-        if (relatedLines.length === 0) {
-            // Look for patterns like "Lines 10-15" or "Line 20"
-            const lineReferences = explanation.match(/\blines?\s+(\d+)(?:\s*[-–]\s*(\d+))?/gi);
-            if (lineReferences) {
-                for (const ref of lineReferences) {
-                    const rangeMatch = ref.match(/\blines?\s+(\d+)(?:\s*[-–]\s*(\d+))?/i);
-                    if (rangeMatch) {
-                        const start = parseInt(rangeMatch[1]) - 1;
-                        const end = rangeMatch[2] ? parseInt(rangeMatch[2]) - 1 : start;
-                        
-                        // Add all lines in the range
-                        for (let line = start; line <= end; line++) {
-                            if (line >= 0 && !relatedLines.includes(line)) {
-                                relatedLines.push(line);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
         console.log(`Parsed related lines from explanation:`, relatedLines.map(l => l + 1)); // Log as 1-based for readability
         return relatedLines.sort((a, b) => a - b);
     }

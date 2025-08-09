@@ -98,7 +98,10 @@ Brief explanation of what the selected code does.
 ## How it works
 Concise explanation of the mechanism.
 ## Related lines
-If applicable: "Lines X-Y: brief explanation" or "Lines X, Y: brief explanation"
+IMPORTANT: Use ONLY these formats for line references:
+- For ranges: "Lines X-Y: brief explanation" (e.g., "Lines 10-16: explanation")
+- For individual lines: "Line X: brief explanation" (e.g., "Line 23: explanation")
+- Do NOT use comma-separated lists like "Lines X, Y" - instead use separate entries
 
 Keep it focused and under 300 words. Use compact formatting.`;
 
