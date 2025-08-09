@@ -189,44 +189,13 @@
     }
     
     function formatExplanation(explanation) {
-        // Convert markdown-like formatting to HTML
-        let formatted = explanation
-            // Convert headers
-            .replace(/^### (.*$)/gm, '<h4>$1</h4>')
-            .replace(/^## (.*$)/gm, '<h3>$1</h3>')
-            .replace(/^# (.*$)/gm, '<h2>$1</h2>')
-            
-            // Convert bold text
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            
-            // Convert inline code
-            .replace(/`([^`]+)`/g, '<code>$1</code>')
-            
-            // Convert code blocks
-            .replace(/```[\s\S]*?```/g, (match) => {
-                const code = match.replace(/```(\w+)?\n?/, '').replace(/```$/, '');
-                return `<pre><code>${escapeHtml(code)}</code></pre>`;
-            })
-            
-            // Convert numbered lists
-            .replace(/^\d+\.\s+(.*)$/gm, '<li>$1</li>')
-            
-            // Convert bullet points
-            .replace(/^[-*]\s+(.*)$/gm, '<li>$1</li>')
-            
-            // Convert line breaks
-            .replace(/\n\n/g, '</p><p>')
-            .replace(/\n/g, '<br>');
+        // Use the markdown parser from the HTML
+        const formatted = parseMarkdown(explanation);
         
-        // Wrap in paragraphs if not already wrapped
-        if (!formatted.startsWith('<')) {
-            formatted = '<p>' + formatted + '</p>';
-        }
-        
-        // Wrap consecutive list items in ul tags
-        formatted = formatted.replace(/(<li>.*?<\/li>)(\s*<li>.*?<\/li>)*/g, (match) => {
-            return '<ul>' + match + '</ul>';
-        });
+        // Trigger syntax highlighting after a short delay to ensure DOM is updated
+        setTimeout(() => {
+            highlightCode();
+        }, 10);
         
         return formatted;
     }

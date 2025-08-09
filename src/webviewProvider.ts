@@ -303,11 +303,12 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} https://cdnjs.cloudflare.com; script-src 'nonce-${nonce}' https://cdnjs.cloudflare.com;">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <link href="${styleResetUri}" rel="stylesheet">
                 <link href="${styleVSCodeUri}" rel="stylesheet">
                 <link href="${styleMainUri}" rel="stylesheet">
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
                 <title>AI Code Explanation</title>
             </head>
             <body>
@@ -399,6 +400,59 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                     </div>
                 </div>
 
+                <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+                <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+                <script nonce="${nonce}">
+                    // Simple markdown parser for code explanations
+                    function parseMarkdown(text) {
+                        if (!text) return '';
+                        
+                        // Convert markdown to HTML
+                        let html = text
+                            // Headers
+                            .replace(/^### (.*$)/gim, '<h4>$1</h4>')
+                            .replace(/^## (.*$)/gim, '<h3>$1</h3>')
+                            .replace(/^# (.*$)/gim, '<h2>$1</h2>')
+                            // Bold
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            // Code blocks with syntax highlighting
+                            .replace(/\`\`\`(\w+)?\n([\s\S]*?)\`\`\`/g, function(match, lang, code) {
+                                const language = lang || 'javascript';
+                                const escapedCode = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                return '<pre class="code-block"><code class="language-' + language + '">' + escapedCode + '</code></pre>';
+                            })
+                            // Inline code
+                            .replace(/\`([^\`]+)\`/g, '<code class="inline-code">$1</code>')
+                            // Numbered lists
+                            .replace(/^\d+\.\s+(.*)$/gim, '<li>$1</li>')
+                            // Bullet points
+                            .replace(/^[-*]\s+(.*)$/gim, '<li>$1</li>')
+                            // Line breaks
+                            .replace(/\n\n/g, '</p><p>')
+                            .replace(/\n/g, '<br>');
+                        
+                        // Wrap consecutive list items in ul tags
+                        html = html.replace(/(<li>.*?<\/li>)(\s*<br>\s*<li>.*?<\/li>)*/g, function(match) {
+                            return '<ul>' + match.replace(/<br>\s*/g, '') + '</ul>';
+                        });
+                        
+                        // Wrap in paragraph tags
+                        html = '<p>' + html + '</p>';
+                        
+                        // Clean up empty paragraphs
+                        html = html.replace(/<p><\/p>/g, '');
+                        html = html.replace(/<p><h/g, '<h').replace(/<\/h([1-6])><\/p>/g, '</h$1>');
+                        
+                        return html;
+                    }
+                    
+                    // Function to highlight code after inserting
+                    function highlightCode() {
+                        if (typeof Prism !== 'undefined') {
+                            Prism.highlightAll();
+                        }
+                    }
+                </script>
                 <script nonce="${nonce}" src="${scriptUri}"></script>
             </body>
             </html>`;

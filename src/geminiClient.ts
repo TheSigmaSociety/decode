@@ -100,13 +100,33 @@ ${codeSnippet}
 
         prompt += `\n- Programming language: ${context.language}`;
 
-        prompt += `\n\n**Please provide:**
+        prompt += `\n\n**Please provide a well-formatted explanation with:**
 1. A clear explanation of what this code does
 2. How the different parts work together
 3. Any important concepts or patterns used
 4. Potential side effects or important behavior
 
-Keep the explanation concise but comprehensive, suitable for a developer trying to understand the code.`;
+**Formatting Guidelines:**
+- Use markdown formatting for better readability
+- Wrap any code snippets in triple backticks with language specification (e.g., \`\`\`javascript, \`\`\`typescript, etc.)
+- Use **bold** for important terms
+- Use bullet points or numbered lists for clarity
+- Keep the explanation concise but comprehensive
+
+Example format:
+## What this code does
+Brief overview...
+
+## Key components
+- **Variable name**: explanation
+- **Function call**: what it does
+
+## Code breakdown
+\`\`\`${context.language}
+// example code with comments
+\`\`\`
+
+Keep the explanation suitable for a developer trying to understand the code.`;
 
         return prompt;
     }

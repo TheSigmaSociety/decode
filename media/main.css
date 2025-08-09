@@ -171,24 +171,136 @@ p {
     margin: 4px 0;
 }
 
-.explanation-content code {
+/* Inline code */
+.explanation-content .inline-code {
     background-color: var(--vscode-textPreformat-background);
     color: var(--vscode-textPreformat-foreground);
-    padding: 2px 4px;
-    border-radius: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
     font-family: var(--vscode-editor-font-family);
-    font-size: 0.9em;
+    font-size: 0.85em;
+    border: 1px solid var(--vscode-widget-border);
 }
 
-.explanation-content pre {
-    background-color: var(--vscode-textPreformat-background);
-    color: var(--vscode-textPreformat-foreground);
-    padding: 12px;
-    border-radius: 4px;
+/* Code blocks */
+.explanation-content .code-block {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    margin: 16px 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.explanation-content .code-block code {
+    display: block;
+    padding: 16px;
     overflow-x: auto;
     font-family: var(--vscode-editor-font-family);
     font-size: 0.9em;
+    line-height: 1.5;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+/* Enhanced headers in explanations */
+.explanation-content h2 {
+    color: var(--vscode-foreground);
+    font-size: 1.3em;
+    font-weight: 600;
+    margin: 20px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--vscode-panel-border);
+}
+
+.explanation-content h3 {
+    color: var(--vscode-foreground);
+    font-size: 1.15em;
+    font-weight: 600;
+    margin: 16px 0 10px 0;
+}
+
+.explanation-content h4 {
+    color: var(--vscode-foreground);
+    font-size: 1.05em;
+    font-weight: 600;
+    margin: 14px 0 8px 0;
+}
+
+/* Better list styling */
+.explanation-content ul, .explanation-content ol {
     margin: 12px 0;
+    padding-left: 24px;
+}
+
+.explanation-content li {
+    margin: 6px 0;
+    line-height: 1.5;
+}
+
+.explanation-content li strong {
+    color: var(--vscode-foreground);
+}
+
+/* Prism.js theme overrides for VS Code integration */
+.explanation-content pre[class*="language-"] {
+    background: var(--vscode-editor-background) !important;
+    border: 1px solid var(--vscode-panel-border);
+}
+
+.explanation-content code[class*="language-"] {
+    background: transparent !important;
+}
+
+/* Token colors that work well with VS Code themes */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: var(--vscode-descriptionForeground);
+}
+
+.token.punctuation {
+    color: var(--vscode-foreground);
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: var(--vscode-debugTokenExpression-number);
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: var(--vscode-debugTokenExpression-string);
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: var(--vscode-foreground);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: var(--vscode-debugTokenExpression-name);
+}
+
+.token.function,
+.token.class-name {
+    color: var(--vscode-symbolIcon-functionForeground);
 }
 
 /* Error */

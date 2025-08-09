@@ -113,6 +113,7 @@ async function initializeServices(context: vscode.ExtensionContext): Promise<voi
 
 function registerWebviewProvider(context: vscode.ExtensionContext): void {
     outputChannel.appendLine('Registering webview provider...');
+    outputChannel.appendLine(`ViewType: ${CodeExplanationWebview.viewType}`);
     
     const provider = vscode.window.registerWebviewViewProvider(
         CodeExplanationWebview.viewType,
@@ -126,6 +127,7 @@ function registerWebviewProvider(context: vscode.ExtensionContext): void {
     
     context.subscriptions.push(provider);
     outputChannel.appendLine('Webview provider registered successfully');
+    outputChannel.appendLine('Check the Activity Bar for the AI Code Explanation icon');
 }
 
 function registerCommands(): void {

@@ -10,12 +10,22 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:aiCodeExplanation"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiCodeExplanation",
+          "title": "AI Code Explanation",
+          "icon": "$(lightbulb)"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "aiCodeExplanation": [
         {
           "type": "webview",
           "id": "aiCodeExplanation",
@@ -34,6 +44,11 @@
       {
         "command": "aiCodeExplanation.setApiKey",
         "title": "Set Gemini API Key",
+        "category": "AI Code Explanation"
+      },
+      {
+        "command": "aiCodeExplanation.focusView",
+        "title": "Focus AI Code Explanation View",
         "category": "AI Code Explanation"
       },
       {

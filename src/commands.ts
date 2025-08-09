@@ -39,7 +39,13 @@ export class CommandManager {
             this.handleTriggerExplanation.bind(this)
         );
 
-        this.context.subscriptions.push(setApiKeyCommand, explainCodeCommand, showGuideCommand, triggerExplanationCommand);
+        // Register the focus view command
+        const focusViewCommand = vscode.commands.registerCommand(
+            'aiCodeExplanation.focusView',
+            this.handleFocusView.bind(this)
+        );
+
+        this.context.subscriptions.push(setApiKeyCommand, explainCodeCommand, showGuideCommand, triggerExplanationCommand, focusViewCommand);
     }
 
     private async handleSetApiKey(): Promise<void> {
@@ -183,6 +189,11 @@ export class CommandManager {
         if (this.selectionHandler) {
             await this.selectionHandler.explainCurrentSelection();
         }
+    }
+
+    private async handleFocusView(): Promise<void> {
+        // Focus the AI Code Explanation view
+        await vscode.commands.executeCommand('aiCodeExplanation.focus');
     }
 
     dispose(): void {
