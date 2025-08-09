@@ -424,6 +424,22 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                         background: rgba(0,0,0,0.2);
                         border-radius: 4px;
                     }
+                    /* Animated gradient border for explanation content - Simple approach */
+                    .explanation-content {
+                        padding: 18px;
+                        margin: 12px 0;
+                        border-radius: 8px;
+                        background: var(--vscode-editor-background);
+                        border: 2px solid #ff6b35;
+                        animation: borderColorShift 3s ease infinite;
+                    }
+                    @keyframes borderColorShift {
+                        0% { border-color: #ff6b35; }
+                        25% { border-color: #4caf50; }
+                        50% { border-color: #2196f3; }
+                        75% { border-color: #9c27b0; }
+                        100% { border-color: #ff6b35; }
+                    }
                 </style>
                 <title>AI Code Explanation</title>
             </head>
