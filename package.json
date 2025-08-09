@@ -1,49 +1,177 @@
 {
-  "name": "decode",
-  "displayName": "decode",
-  "description": "",
+  "name": "ai-code-explanation",
+  "displayName": "AI Code Explanation",
+  "description": "AI-powered code explanation extension using Gemini API",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.103.0"
+    "vscode": "^1.74.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
-  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
   "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "aiCodeExplanation",
+          "name": "Code Explanation",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "aiCodeExplanation",
+        "contents": "Welcome to AI Code Explanation!\n[Set API Key](command:aiCodeExplanation.setApiKey)\n[Learn More](https://ai.google.dev/gemini-api/docs/api-key)"
+      }
+    ],
     "commands": [
       {
-        "command": "decode.helloWorld",
-        "title": "Hello World"
+        "command": "aiCodeExplanation.setApiKey",
+        "title": "Set Gemini API Key",
+        "category": "AI Code Explanation"
+      },
+      {
+        "command": "aiCodeExplanation.explainCode",
+        "title": "Explain Selected Code",
+        "category": "AI Code Explanation"
+      },
+      {
+        "command": "aiCodeExplanation.toggleHighlights",
+        "title": "Toggle Code Highlights",
+        "category": "AI Code Explanation"
+      },
+      {
+        "command": "aiCodeExplanation.clearHighlights",
+        "title": "Clear Code Highlights",
+        "category": "AI Code Explanation"
+      },
+      {
+        "command": "aiCodeExplanation.testConnection",
+        "title": "Test Gemini API Connection",
+        "category": "AI Code Explanation"
+      },
+      {
+        "command": "aiCodeExplanation.showOutput",
+        "title": "Show Output",
+        "category": "AI Code Explanation"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "AI Code Explanation",
+      "properties": {
+        "aiCodeExplanation.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Gemini API key for code explanations",
+          "scope": "application"
+        },
+        "aiCodeExplanation.model": {
+          "type": "string",
+          "default": "gemini-2.0-flash-001",
+          "description": "Gemini model to use for explanations"
+        },
+        "aiCodeExplanation.temperature": {
+          "type": "number",
+          "default": 0.3,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Temperature for AI responses (0 = deterministic, 1 = creative)"
+        },
+        "aiCodeExplanation.maxTokens": {
+          "type": "number",
+          "default": 1000,
+          "description": "Maximum tokens for AI responses"
+        },
+        "aiCodeExplanation.enableAutoExplanation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically explain code when selecting lines"
+        },
+        "aiCodeExplanation.debounceDelay": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "maximum": 2000,
+          "description": "Delay in milliseconds before processing code selection"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "aiCodeExplanation.explainCode",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "aiCodeExplanation.toggleHighlights",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "aiCodeExplanation.explainCode",
+          "when": "editorHasSelection",
+          "group": "1_modification@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "aiCodeExplanation.explainCode",
+          "when": "editorIsOpen"
+        },
+        {
+          "command": "aiCodeExplanation.toggleHighlights",
+          "when": "editorIsOpen"
+        },
+        {
+          "command": "aiCodeExplanation.clearHighlights",
+          "when": "editorIsOpen"
+        }
+      ]
+    }
   },
   "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
-    "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "watch:tsc": "tsc -watch -p ./",
+    "watch:esbuild": "echo 'esbuild not configured, using tsc watch instead' && npm run watch",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:performance": "jest --testPathPattern=performance",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch"
   },
   "devDependencies": {
-    "@types/vscode": "^1.80.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
-    "eslint": "^9.32.0",
-    "esbuild": "^0.25.8",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.9.2",
-    "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+    "@types/glob": "^8.0.0",
+    "@types/jest": "^29.2.4",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "jest": "^29.3.1",
+    "mocha": "^10.1.0",
+    "ts-jest": "^29.4.1",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "@google/genai": "^1.13.0"
   }
 }
