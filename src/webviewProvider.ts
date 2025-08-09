@@ -156,6 +156,34 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
         this._saveState();
     }
 
+    public showInlineLoading(): void {
+        console.log('WebviewProvider.showInlineLoading called');
+        this._isLoading = true;
+        
+        if (this._view) {
+            console.log('Sending showInlineLoading message to webview');
+            this._view.webview.postMessage({
+                type: 'showInlineLoading'
+            });
+        } else {
+            console.warn('Webview is not available to show inline loading');
+        }
+    }
+
+    public hideInlineLoading(): void {
+        console.log('WebviewProvider.hideInlineLoading called');
+        this._isLoading = false;
+        
+        if (this._view) {
+            console.log('Sending hideInlineLoading message to webview');
+            this._view.webview.postMessage({
+                type: 'hideInlineLoading'
+            });
+        } else {
+            console.warn('Webview is not available to hide inline loading');
+        }
+    }
+
     public showWelcome(): void {
         this._currentState = WebviewState.Welcome;
         
@@ -439,6 +467,10 @@ export class CodeExplanationWebview implements CodeExplanationWebviewProvider {
                     <div id="explanation" class="section hidden">
                         <div class="explanation-header">
                             <h3>Code Explanation</h3>
+                            <div id="inlineLoading" class="inline-loading hidden">
+                                <div class="inline-spinner"></div>
+                                <span>Generating explanation...</span>
+                            </div>
                             <div class="actions">
                                 <button id="historyBtn" class="icon-button" title="Show history">
                                     <span class="codicon codicon-history"></span>

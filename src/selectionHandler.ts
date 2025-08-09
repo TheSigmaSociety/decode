@@ -167,6 +167,18 @@ export class SelectionHandler {
     }
 
     private async handleComplexSelection(editor: vscode.TextEditor, selection: vscode.Selection): Promise<void> {
+        // Determine if this is the first request or a subsequent one
+        const currentState = this.webviewProvider.getState();
+        const hasExistingContent = currentState === 'explanation' && this.webviewProvider.getCurrentExplanation();
+        
+        if (hasExistingContent) {
+            // Show inline loading for subsequent requests
+            this.webviewProvider.showInlineLoading();
+        } else {
+            // Show full loading for first request
+            this.webviewProvider.showLoading();
+        }
+
         // For multi-line selections, first highlight the user's actual selection
         const startLine = selection.start.line;
         const endLine = selection.end.line;
@@ -186,8 +198,17 @@ export class SelectionHandler {
 
     private async analyzeAndHighlightLine(editor: vscode.TextEditor, lineNumber: number): Promise<void> {
         try {
-            // Show loading state
-            this.webviewProvider.showLoading();
+            // Determine if this is the first request or a subsequent one
+            const currentState = this.webviewProvider.getState();
+            const hasExistingContent = currentState === 'explanation' && this.webviewProvider.getCurrentExplanation();
+            
+            if (hasExistingContent) {
+                // Show inline loading for subsequent requests
+                this.webviewProvider.showInlineLoading();
+            } else {
+                // Show full loading for first request
+                this.webviewProvider.showLoading();
+            }
 
             // Don't pre-find related lines - let the AI identify them
             // The user's selection is already highlighted by the calling method
@@ -271,6 +292,9 @@ export class SelectionHandler {
                 console.log(`AI identified ${relatedLines.length} related lines:`, relatedLines);
                 this.decorationManager.addRelatedLines(editor, relatedLines);
             }
+
+            // Hide inline loading before updating content
+            this.webviewProvider.hideInlineLoading();
 
             // Update the webview with the explanation
             this.webviewProvider.updateContent(

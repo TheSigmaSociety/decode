@@ -171,6 +171,12 @@
             case 'showLoading':
                 showLoading();
                 break;
+            case 'showInlineLoading':
+                showInlineLoading();
+                break;
+            case 'hideInlineLoading':
+                hideInlineLoading();
+                break;
             case 'showWelcome':
                 showWelcome();
                 break;
@@ -297,6 +303,26 @@
         }
         
         errorSection?.classList.remove('hidden');
+    }
+    
+    function showInlineLoading() {
+        console.log('Showing inline loading indicator');
+        const inlineLoading = document.getElementById('inlineLoading');
+        if (inlineLoading) {
+            inlineLoading.classList.remove('hidden');
+        } else {
+            console.error('inlineLoading element not found');
+        }
+    }
+    
+    function hideInlineLoading() {
+        console.log('Hiding inline loading indicator');
+        const inlineLoading = document.getElementById('inlineLoading');
+        if (inlineLoading) {
+            inlineLoading.classList.add('hidden');
+        } else {
+            console.error('inlineLoading element not found');
+        }
     }
     
     function formatExplanation(explanation) {
