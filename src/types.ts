@@ -49,6 +49,8 @@ export interface ConfigurationManager {
 
 export interface DecorationManager {
   highlightLines(editor: vscode.TextEditor, lines: number[]): void;
+  highlightUserSelection(editor: vscode.TextEditor, selectedLines: number[]): void;
+  addRelatedLines(editor: vscode.TextEditor, relatedLines: number[]): void;
   clearHighlights(): void;
   updateHighlights(selectedLine: number, relatedLines: number[]): void;
 }

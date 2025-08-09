@@ -148,35 +148,39 @@ export class SelectionHandler {
     private handleEmptySelection(editor: vscode.TextEditor, selection: vscode.Selection): void {
         // For cursor position, analyze the current line
         const lineNumber = selection.start.line;
+        
+        // Immediately highlight the current line as user's implicit selection
+        this.decorationManager.highlightUserSelection(editor, [lineNumber]);
+        
+        // Generate explanation - AI will identify related lines
         this.analyzeAndHighlightLine(editor, lineNumber);
     }
 
     private async handleLineSelection(editor: vscode.TextEditor, selection: vscode.Selection): Promise<void> {
         const lineNumber = selection.start.line;
+        
+        // Immediately highlight the user's selected line
+        this.decorationManager.highlightUserSelection(editor, [lineNumber]);
+        
+        // Generate explanation - AI will identify related lines
         await this.analyzeAndHighlightLine(editor, lineNumber);
     }
 
     private async handleComplexSelection(editor: vscode.TextEditor, selection: vscode.Selection): Promise<void> {
-        // For multi-line selections, analyze each line and combine results
+        // For multi-line selections, first highlight the user's actual selection
         const startLine = selection.start.line;
         const endLine = selection.end.line;
         
-        const allRelatedLines = new Set<number>();
-        
-        // Add all selected lines
+        // Immediately highlight the user's selection (not related lines yet)
+        const userSelectedLines: number[] = [];
         for (let line = startLine; line <= endLine; line++) {
-            allRelatedLines.add(line);
-            
-            // Find related lines for each selected line
-            const relatedLines = this.codeAnalysis.findRelatedLines(editor.document, line);
-            relatedLines.forEach(relatedLine => allRelatedLines.add(relatedLine));
+            userSelectedLines.push(line);
         }
+        
+        // Show the user's selection immediately
+        this.decorationManager.highlightUserSelection(editor, userSelectedLines);
 
-        // Highlight all related lines
-        const sortedLines = Array.from(allRelatedLines).sort((a, b) => a - b);
-        this.decorationManager.highlightLines(editor, sortedLines);
-
-        // Generate explanation for the entire selection
+        // Generate explanation for the entire selection - AI will identify related lines
         await this.generateExplanationForSelection(editor, selection);
     }
 
@@ -185,14 +189,11 @@ export class SelectionHandler {
             // Show loading state
             this.webviewProvider.showLoading();
 
-            // Find related lines
-            const relatedLines = this.codeAnalysis.findRelatedLines(editor.document, lineNumber);
+            // Don't pre-find related lines - let the AI identify them
+            // The user's selection is already highlighted by the calling method
             
-            // Highlight the lines
-            this.decorationManager.highlightLines(editor, relatedLines);
-
             // Generate explanation
-            const selection = new vscode.Selection(lineNumber, 0, lineNumber, 0);
+            const selection = new vscode.Selection(lineNumber, 0, lineNumber, editor.document.lineAt(lineNumber).text.length);
             await this.generateExplanationForSelection(editor, selection);
 
         } catch (error: any) {
@@ -223,15 +224,27 @@ export class SelectionHandler {
             console.log(`Code analysis completed. Found ${analysisResult.relatedLines.length} related lines`);
             console.log(`Context: ${analysisResult.context.language}, Function: ${analysisResult.context.functionName || 'none'}, Class: ${analysisResult.context.className || 'none'}`);
             
-            // Build the code snippet for explanation
-            const codeSnippet = this.buildCodeSnippet(analysisResult.selectedLine, analysisResult.relatedLines);
+            // Get the entire file content for full context
+            const fullFileContent = editor.document.getText();
+            const selectedText = editor.document.getText(selection);
+            const startLine = selection.start.line;
+            const endLine = selection.end.line;
             
-            // Log the code snippet being sent to API
-            console.log(`Sending code snippet to Gemini API (${codeSnippet.length} characters)`);
+            // Build enhanced context with full file and selection markers
+            const enhancedContext = this.buildEnhancedContext(
+                fullFileContent, 
+                selectedText, 
+                startLine, 
+                endLine, 
+                analysisResult.context
+            );
+            
+            console.log(`Sending full file context to Gemini API (${enhancedContext.length} characters)`);
+            console.log(`Selected text: "${selectedText}" (lines ${startLine + 1}-${endLine + 1})`);
             
             // Generate explanation using Gemini with retry logic
             const explanation = await this.errorHandler.retryWithBackoff(async () => {
-                const result = await this.geminiClient.explainCode(codeSnippet, analysisResult.context);
+                const result = await this.geminiClient.explainCode(enhancedContext, analysisResult.context);
                 
                 // Validate the response
                 if (!result || result.trim().length === 0) {
@@ -251,10 +264,17 @@ export class SelectionHandler {
             const duration = Date.now() - startTime;
             console.log(`Explanation generated successfully in ${duration}ms (${explanation.length} characters)`);
 
+            // Parse the explanation for related lines identified by the AI
+            const relatedLines = this.parseRelatedLinesFromExplanation(explanation);
+            if (relatedLines.length > 0) {
+                console.log(`AI identified ${relatedLines.length} related lines:`, relatedLines);
+                this.decorationManager.addRelatedLines(editor, relatedLines);
+            }
+
             // Update the webview with the explanation
             this.webviewProvider.updateContent(
                 explanation,
-                codeSnippet,
+                selectedText,
                 analysisResult.context.language
             );
 
@@ -321,6 +341,118 @@ export class SelectionHandler {
         }
         
         return snippet;
+    }
+
+    private buildEnhancedContext(
+        fullFileContent: string, 
+        selectedText: string, 
+        startLine: number, 
+        endLine: number, 
+        context: any
+    ): string {
+        const lines = fullFileContent.split('\n');
+        const maxContextLength = 8000; // Reasonable limit for API calls
+        
+        // If the file is small enough, send the whole thing with selection markers
+        if (fullFileContent.length <= maxContextLength) {
+            // Add markers to indicate the selected portion
+            const markedLines = lines.map((line, index) => {
+                if (index >= startLine && index <= endLine) {
+                    return `>>> ${line} <<<  // [SELECTED BY USER]`;
+                }
+                return line;
+            });
+            
+            return markedLines.join('\n');
+        }
+        
+        // For larger files, include context around the selection
+        const contextRadius = 20; // Lines of context before and after selection
+        const contextStart = Math.max(0, startLine - contextRadius);
+        const contextEnd = Math.min(lines.length - 1, endLine + contextRadius);
+        
+        let contextLines: string[] = [];
+        
+        // Add file header info if available
+        if (context.imports && context.imports.length > 0) {
+            contextLines.push('// File imports:');
+            context.imports.forEach((imp: string) => {
+                contextLines.push(`// ${imp}`);
+            });
+            contextLines.push('');
+        }
+        
+        // Add context before selection
+        if (contextStart > 0) {
+            contextLines.push('// ... (earlier code omitted) ...');
+            contextLines.push('');
+        }
+        
+        // Add the contextual code with selection markers
+        for (let i = contextStart; i <= contextEnd; i++) {
+            if (i >= startLine && i <= endLine) {
+                contextLines.push(`>>> ${lines[i]} <<<  // [SELECTED BY USER]`);
+            } else {
+                contextLines.push(lines[i]);
+            }
+        }
+        
+        // Add indicator if there's more code after
+        if (contextEnd < lines.length - 1) {
+            contextLines.push('');
+            contextLines.push('// ... (later code omitted) ...');
+        }
+        
+        return contextLines.join('\n');
+    }
+
+    private parseRelatedLinesFromExplanation(explanation: string): number[] {
+        const relatedLines: number[] = [];
+        
+        // Look for patterns like "Line 15", "line 23", "Lines 10-15", etc.
+        const linePatterns = [
+            /\bline\s+(\d+)/gi,  // "line 15"
+            /\blines?\s+(\d+)(?:\s*[-–]\s*(\d+))?/gi,  // "line 15" or "lines 15-18"
+            /\bLine\s+(\d+)/g,   // "Line 15" (capital L)
+            /\bLines\s+(\d+)(?:\s*[-–]\s*(\d+))?/g   // "Lines 15-18"
+        ];
+
+        for (const pattern of linePatterns) {
+            let match;
+            while ((match = pattern.exec(explanation)) !== null) {
+                const startLine = parseInt(match[1]) - 1; // Convert to 0-based indexing
+                const endLine = match[2] ? parseInt(match[2]) - 1 : startLine;
+                
+                // Add all lines in the range
+                for (let line = startLine; line <= endLine; line++) {
+                    if (line >= 0 && !relatedLines.includes(line)) {
+                        relatedLines.push(line);
+                    }
+                }
+            }
+        }
+
+        // Also look for code snippets in backticks that might reference line numbers
+        const codeBlockPattern = /```[\s\S]*?```/g;
+        explanation.replace(codeBlockPattern, ''); // Remove code blocks to avoid false positives
+        
+        // Look for "related lines:" sections
+        const relatedSectionPattern = /related\s+(?:lines?|code|elements?)[\s:]*([^\n]*)/gi;
+        let match;
+        while ((match = relatedSectionPattern.exec(explanation)) !== null) {
+            const section = match[1];
+            const numberPattern = /\d+/g;
+            let numberMatch;
+            while ((numberMatch = numberPattern.exec(section)) !== null) {
+                const lineNum = parseInt(numberMatch[0]) - 1; // Convert to 0-based
+                if (lineNum >= 0 && !relatedLines.includes(lineNum)) {
+                    relatedLines.push(lineNum);
+                }
+            }
+        }
+
+        console.log(`Parsed related lines from explanation:`, relatedLines.map(l => l + 1)); // Log as 1-based for readability
+        return relatedLines.sort((a, b) => a - b);
     }
 
     private onActiveEditorChanged(editor: vscode.TextEditor | undefined): void {

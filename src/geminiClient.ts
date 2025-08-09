@@ -78,9 +78,11 @@ export class GeminiApiClient implements GeminiClient {
     }
 
     private buildExplanationPrompt(codeSnippet: string, context: CodeContext): string {
-        let prompt = `You are a helpful programming assistant. Please explain the following code in plain English, focusing on what it does and how it works.
+        let prompt = `You are a helpful programming assistant. Please analyze the following code and provide a comprehensive explanation.
 
-**Code to explain:**
+**IMPORTANT**: The code marked with ">>> code <<<  // [SELECTED BY USER]" is what the user specifically selected for explanation. Focus your explanation on this selected code, but use the surrounding context to provide better understanding.
+
+**Code to analyze:**
 \`\`\`${context.language}
 ${codeSnippet}
 \`\`\`
@@ -106,32 +108,37 @@ ${codeSnippet}
         prompt += `\n- Programming language: ${context.language}`;
 
         prompt += `\n\n**Please provide a well-formatted explanation with:**
-1. A clear explanation of what this code does
-2. How the different parts work together
-3. Any important concepts or patterns used
-4. Potential side effects or important behavior
+1. **Primary Focus**: A clear explanation of what the SELECTED code (marked with >>>) does
+2. **How it works**: Explain the mechanics and logic of the selected code
+3. **Context Integration**: How the selected code fits within the surrounding code/function/class
+4. **Related Lines**: Identify OTHER lines in the provided code that are directly related to or affected by the selected code (NOT the selected lines themselves)
+5. **Important concepts**: Any important patterns, algorithms, or best practices demonstrated
+
+**CRITICAL**: When identifying "related lines", only mention line numbers or code snippets that are NOT part of the user's selection but are relevant to understanding the selected code.
 
 **Formatting Guidelines:**
 - Use markdown formatting for better readability
-- Wrap any code snippets in triple backticks with language specification (e.g., \`\`\`javascript, \`\`\`typescript, etc.)
+- Wrap any code snippets in triple backticks with language specification
 - Use **bold** for important terms
 - Use bullet points or numbered lists for clarity
-- Keep the explanation concise but comprehensive
+- If identifying related lines, format them as: "Related lines: Line X (purpose), Line Y (purpose)"
+- Keep the explanation comprehensive but focused on the selected code
 
 Example format:
-## What this code does
-Brief overview...
+## What the selected code does
+Brief overview of the selected code's purpose...
 
-## Key components
-- **Variable name**: explanation
-- **Function call**: what it does
+## How it works
+Step-by-step breakdown of the selected code...
 
-## Code breakdown
-\`\`\`${context.language}
-// example code with comments
-\`\`\`
+## Context and integration
+How this fits with the surrounding code...
 
-Keep the explanation suitable for a developer trying to understand the code.`;
+## Related code elements
+- Line X: [explanation of how this line relates]
+- Variable Y: [explanation of how this relates]
+
+Keep the explanation suitable for a developer trying to understand the selected code.`;
 
         return prompt;
     }

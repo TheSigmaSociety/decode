@@ -32,6 +32,74 @@ export class CodeDecorationManager implements DecorationManager {
         this.updateHighlights(selectedLine, relatedLines, editor);
     }
 
+    highlightUserSelection(editor: vscode.TextEditor, selectedLines: number[]): void {
+        if (selectedLines.length === 0) {
+            this.clearHighlights();
+            return;
+        }
+
+        // Clear previous decorations for this editor
+        this.clearHighlightsForEditor(editor);
+
+        try {
+            // Create ranges for the user's selection (no related lines yet)
+            const selectedRanges = selectedLines
+                .map(line => this.createLineRange(editor.document, line))
+                .filter(range => range !== null) as vscode.Range[];
+
+            // Apply decoration to user's selection
+            if (selectedRanges.length > 0) {
+                editor.setDecorations(this.selectedLineDecorationType, selectedRanges);
+            }
+
+            // Store current decorations (no related lines yet)
+            this.currentDecorations.set(editor, {
+                selectedLine: selectedRanges,
+                relatedLines: []
+            });
+
+            // Scroll to show the first selected line
+            if (selectedRanges.length > 0) {
+                this.scrollToRange(editor, selectedRanges[0]);
+            }
+
+        } catch (error) {
+            console.error('Error highlighting user selection:', error);
+        }
+    }
+
+    addRelatedLines(editor: vscode.TextEditor, relatedLines: number[]): void {
+        // Add related lines to existing user selection without changing the selected lines
+        const existing = this.currentDecorations.get(editor);
+        if (!existing) {
+            console.warn('No existing selection to add related lines to');
+            return;
+        }
+
+        try {
+            // Create ranges for related lines, excluding any that are already selected
+            const selectedLineNumbers = existing.selectedLine.map(range => range.start.line);
+            const relatedRanges = relatedLines
+                .filter(line => !selectedLineNumbers.includes(line)) // Don't include selected lines as related
+                .map(line => this.createLineRange(editor.document, line))
+                .filter(range => range !== null) as vscode.Range[];
+
+            // Apply related lines decoration
+            if (relatedRanges.length > 0) {
+                editor.setDecorations(this.relatedLinesDecorationType, relatedRanges);
+            }
+
+            // Update stored decorations
+            this.currentDecorations.set(editor, {
+                selectedLine: existing.selectedLine,
+                relatedLines: relatedRanges
+            });
+
+        } catch (error) {
+            console.error('Error adding related lines:', error);
+        }
+    }
+
     clearHighlights(): void {
         // Clear all decorations from all editors
         for (const [editor, decorations] of this.currentDecorations) {
